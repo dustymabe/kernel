@@ -1,0 +1,50 @@
+From 950cf0135c679d14c1e05eefc4cbdfc8f8c5445b Mon Sep 17 00:00:00 2001
+From: Dusty Mabe <dusty@dustymabe.com>
+Date: Sun, 23 Jan 2022 09:06:06 -0500
+Subject: [PATCH] Revert "PCI/MSI: Mask MSI-X vectors only on success"
+
+This reverts commit d8888cdabedf353ab9b5a6af75f70bf341a3e7df, which
+is the 5.15.x backport of upstream 83dbf898a2d4. It seems to have
+caused issues booting with enhanced networking on AWS instance types
+that use the ixgbevf driver for their NIC.
+
+https://github.com/coreos/fedora-coreos-tracker/issues/1066
+https://bugzilla.redhat.com/show_bug.cgi?id=2040360
+---
+ drivers/pci/msi.c | 13 +++----------
+ 1 file changed, 3 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/pci/msi.c b/drivers/pci/msi.c
+index e11530cb0569..412d818d7ada 100644
+--- a/drivers/pci/msi.c
++++ b/drivers/pci/msi.c
+@@ -721,6 +721,9 @@ static int msix_capability_init(struct pci_dev *dev, struct msix_entry *entries,
+ 		goto out_disable;
+ 	}
+ 
++	/* Ensure that all table entries are masked. */
++	msix_mask_all(base, tsize);
++
+ 	ret = msix_setup_entries(dev, base, entries, nvec, affd);
+ 	if (ret)
+ 		goto out_disable;
+@@ -747,16 +750,6 @@ static int msix_capability_init(struct pci_dev *dev, struct msix_entry *entries,
+ 	/* Set MSI-X enabled bits and unmask the function */
+ 	pci_intx_for_msi(dev, 0);
+ 	dev->msix_enabled = 1;
+-
+-	/*
+-	 * Ensure that all table entries are masked to prevent
+-	 * stale entries from firing in a crash kernel.
+-	 *
+-	 * Done late to deal with a broken Marvell NVME device
+-	 * which takes the MSI-X mask bits into account even
+-	 * when MSI-X is disabled, which prevents MSI delivery.
+-	 */
+-	msix_mask_all(base, tsize);
+ 	pci_msix_clear_and_set_ctrl(dev, PCI_MSIX_FLAGS_MASKALL, 0);
+ 
+ 	pcibios_free_irq(dev);
+-- 
+2.33.1
+

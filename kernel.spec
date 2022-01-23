@@ -845,6 +845,7 @@ Source4002: gating.yaml
 %if !%{nopatches}
 
 Patch1: patch-%{patchversion}-redhat.patch
+Patch2: 0001-Revert-PCI-MSI-Mask-MSI-X-vectors-only-on-success.patch
 %endif
 
 # empty final patch to facilitate testing of kernel patches
@@ -1385,6 +1386,7 @@ cp -a %{SOURCE1} .
 ApplyOptionalPatch patch-%{patchversion}-redhat.patch
 %endif
 
+ApplyOptionalPatch 0001-Revert-PCI-MSI-Mask-MSI-X-vectors-only-on-success.patch
 ApplyOptionalPatch linux-kernel-test.patch
 
 # END OF PATCH APPLICATIONS
@@ -2972,6 +2974,14 @@ fi
 #
 #
 %changelog
+* Sun Jan 23 2022 Dusty Mabe <dusty@dustymabe.com>
+- Revert commit d8888cdabedf from 5.15.X which maps to mainline commit
+  83dbf898a2d4. It seems to have caused issues booting with enhanced
+  networking on AWS instance types that use the ixgbevf driver for
+  their NIC.
+    - https://github.com/coreos/fedora-coreos-tracker/issues/1066
+    - https://bugzilla.redhat.com/show_bug.cgi?id=2040360
+
 * Thu Jan 20 2022 Justin M. Forbes <jforbes@fedoraproject.org> [5.15.16-0]
 - drm/amdgpu: don't do resets on APUs which don't support it (Alex Deucher)
 
